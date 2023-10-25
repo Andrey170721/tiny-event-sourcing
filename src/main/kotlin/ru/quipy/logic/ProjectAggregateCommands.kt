@@ -40,3 +40,7 @@ fun ProjectAggregateState.assignTagToTask(tagId: UUID, taskId: UUID): TagAssigne
 
     return TagAssignedToTaskEvent(projectId = this.getId(), tagId = tagId, taskId = taskId)
 }
+
+fun ProjectAggregateState.getTask(taskId: UUID): TaskEntity? {
+    return tasks.get(taskId)
+}

@@ -10,9 +10,7 @@ import ru.quipy.api.ProjectAggregate
 import ru.quipy.api.ProjectCreatedEvent
 import ru.quipy.api.TaskCreatedEvent
 import ru.quipy.core.EventSourcingService
-import ru.quipy.logic.ProjectAggregateState
-import ru.quipy.logic.addTask
-import ru.quipy.logic.create
+import ru.quipy.logic.*
 import java.util.*
 
 @RestController
@@ -29,6 +27,12 @@ class ProjectController(
     @GetMapping("/{projectId}")
     fun getAccount(@PathVariable projectId: UUID) : ProjectAggregateState? {
         return projectEsService.getState(projectId)
+    }
+
+    @GetMapping("/{projectId}/tasks/{taskId}")
+    fun getTask(@PathVariable projectId: UUID, @PathVariable taskId: UUID) : TaskEntity? {
+        var state = projectEsService.getState(projectId);
+        return state?.getTask(taskId)
     }
 
     @PostMapping("/{projectId}/tasks/{taskName}")
