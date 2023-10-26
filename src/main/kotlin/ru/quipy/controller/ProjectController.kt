@@ -6,9 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import ru.quipy.api.ProjectAggregate
-import ru.quipy.api.ProjectCreatedEvent
-import ru.quipy.api.TaskCreatedEvent
+import ru.quipy.api.*
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.*
 import java.util.*
@@ -31,7 +29,7 @@ class ProjectController(
 
     @GetMapping("/{projectId}/tasks/{taskId}")
     fun getTask(@PathVariable projectId: UUID, @PathVariable taskId: UUID) : TaskEntity? {
-        var state = projectEsService.getState(projectId);
+        val state = projectEsService.getState(projectId);
         return state?.getTask(taskId)
     }
 
@@ -39,6 +37,20 @@ class ProjectController(
     fun createTask(@PathVariable projectId: UUID, @PathVariable taskName: String) : TaskCreatedEvent {
         return projectEsService.update(projectId) {
             it.addTask(taskName)
+        }
+    }
+
+    @PostMapping("/1/{projectId}")
+    fun createTag(@PathVariable projectId: UUID, @RequestParam tagName: String): TagCreatedEvent{
+        return projectEsService.update(projectId){
+            it.createTag(tagName)
+        }
+    }
+
+    @PostMapping("/assignTag/{projectId}/{taskId}/{tagId}")
+    fun assignTag(@PathVariable projectId: UUID, @PathVariable taskId: UUID, @PathVariable tagId : UUID): TagAssignedToTaskEvent{
+        return projectEsService.update(projectId){
+            it.assignTagToTask(tagId, taskId)
         }
     }
 }
