@@ -1,42 +1,97 @@
 package ru.quipy.logic
 
-import ru.quipy.api.ProjectCreatedEvent
-import ru.quipy.api.TagAssignedToTaskEvent
-import ru.quipy.api.TagCreatedEvent
-import ru.quipy.api.TaskCreatedEvent
+import ru.quipy.api.*
 import java.util.*
 
 
 // Commands : takes something -> returns event
 // Here the commands are represented by extension functions, but also can be the class member functions
 
-fun ProjectAggregateState.create(id: UUID, title: String, creatorId: String): ProjectCreatedEvent {
-    return ProjectCreatedEvent(
-        projectId = id,
-        title = title,
-        creatorId = creatorId,
-    )
+fun ProjectAggregateState.create(id: UUID, title: String, creatorId: UUID): ProjectCreatedEvent {
+    return ProjectCreatedEvent(projectId = id, title = title, creatorId = creatorId)
+}
+
+fun ProjectAggregateState.addUser(projectId: UUID, userId: UUID): AddUserToProjectEvent {
+    var userAlreadyExist = false;
+    this.projectMemberIds.forEach { element ->
+        if (element == userId){
+            userAlreadyExist = true;
+        }
+    }
+
+    if (userAlreadyExist){
+        throw IllegalArgumentException("User already exist in this project: $userId")
+    }
+
+    return AddUserToProjectEvent(projectId = projectId, userId = userId);
+}
+
+fun ProjectAggregateState.changeTitle(projectId: UUID, title: String): ProjectTitleChangedEvent {
+    return ProjectTitleChangedEvent(projectId = projectId, title = title);
+}
+
+fun ProjectAggregateState.addStatus(name: String, color: String): StatusCreatedEvent {
+    return StatusCreatedEvent(projectId = this.getId(), statusId = UUID.randomUUID(), statusName = name, color = color)
+}
+
+fun ProjectAggregateState.removeStatus(statusId: UUID, projectId: UUID): StatusDeletedEvent {
+    if (!projectStatus.containsKey(statusId)){
+        throw IllegalArgumentException("Status doesn't exists: $statusId")
+    }
+
+    var statusIsUsed = false;
+    this.tasks.forEach { element ->
+        if (element.value.status == statusId){
+            statusIsUsed = true;
+        }
+    }
+
+    if (statusIsUsed){
+        throw IllegalArgumentException("Status is used: $statusId")
+    }
+
+    return StatusDeletedEvent(statusId, projectId)
 }
 
 fun ProjectAggregateState.addTask(name: String): TaskCreatedEvent {
-    return TaskCreatedEvent(projectId = this.getId(), taskId = UUID.randomUUID(), taskName = name)
+    return TaskCreatedEvent(projectId = this.getId(), taskId = UUID.randomUUID(), title = name)
 }
 
-fun ProjectAggregateState.createTag(name: String): TagCreatedEvent {
-    if (projectTags.values.any { it.name == name }) {
-        throw IllegalArgumentException("Tag already exists: $name")
-    }
-    return TagCreatedEvent(projectId = this.getId(), tagId = UUID.randomUUID(), tagName = name)
+fun ProjectAggregateState.changeTaskTitle(taskId: UUID, title: String): TaskTitleChangedEvent{
+    return  TaskTitleChangedEvent(taskId = taskId, title = title)
 }
 
-fun ProjectAggregateState.assignTagToTask(tagId: UUID, taskId: UUID): TagAssignedToTaskEvent {
-    if (!projectTags.containsKey(tagId)) {
-        throw IllegalArgumentException("Tag doesn't exists: $tagId")
+fun ProjectAggregateState.changeTaskStatus(taskId: UUID, statusId: UUID): TaskStatusChangedEvent{
+    if (!projectStatus.containsKey(statusId)){
+        throw IllegalArgumentException("Status doesn't exists: $statusId")
     }
 
-    if (!tasks.containsKey(taskId)) {
-        throw IllegalArgumentException("Task doesn't exists: $taskId")
+    return TaskStatusChangedEvent(taskId = taskId, statusId = statusId)
+}
+
+fun ProjectAggregateState.memberAssignedToTask(userId: UUID, taskId: UUID): MemberAssignedToTaskEvent{
+    var userNotExist = true;
+    var taskNotExist = true;
+
+    this.projectMemberIds.forEach { element ->
+        if (element == userId){
+            userNotExist = false;
+        }
     }
 
-    return TagAssignedToTaskEvent(projectId = this.getId(), tagId = tagId, taskId = taskId)
+    this.tasks.forEach { element ->
+        if (element.value.id == taskId){
+            taskNotExist = true;
+        }
+    }
+
+    if (userNotExist){
+        throw IllegalArgumentException("User not exist: $userId")
+    }
+
+    if (taskNotExist){
+        throw IllegalArgumentException("Task not exist: $taskId")
+    }
+
+    return MemberAssignedToTaskEvent(taskId = taskId, userId = userId)
 }
