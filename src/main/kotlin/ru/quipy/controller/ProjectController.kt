@@ -23,8 +23,8 @@ class ProjectController(
     }
 
     @PostMapping("/{projectId}/users/{userId}")
-    fun addUserToProject(@PathVariable projectId: UUID, @PathVariable userId: UUID) : AddUserToProjectEvent {
-        return projectEsService.update(projectId) { it.addUser(projectId, userId) }
+    fun addUserToProject(@PathVariable projectId: UUID, @PathVariable userId: UUID, @RequestParam actorId: UUID) : AddUserToProjectEvent {
+        return projectEsService.update(projectId) { it.addUser(projectId, userId, actorId) }
     }
 
     @PatchMapping("/{projectId}/changeTitle/{newTitle}")
