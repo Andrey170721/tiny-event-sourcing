@@ -67,4 +67,10 @@ class ProjectController(
     fun memberAssignToTask(@PathVariable projectId: UUID, @PathVariable taskId: UUID, @PathVariable userId: UUID) : MemberAssignedToTaskEvent {
         return projectEsService.update(projectId){ it.memberAssignedToTask(userId, taskId) }
     }
+
+    @GetMapping("/{projectId}/getTasks")
+    fun getTasks(@PathVariable projectId: UUID): MutableMap<UUID, TaskEntity>? {
+        var projectAggregateState = projectEsService.getState(projectId)
+        return projectAggregateState?.tasks
+    }
 }
