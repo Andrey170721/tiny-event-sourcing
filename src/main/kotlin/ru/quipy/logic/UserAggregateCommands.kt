@@ -5,6 +5,7 @@ import ru.quipy.api.UserCreatedEvent
 import java.util.*
 
 fun UserAggregateState.create(id: UUID, name: String, nickname: String, password: String): UserCreatedEvent {
+
     return UserCreatedEvent(
         userId = id,
         firstname = name,

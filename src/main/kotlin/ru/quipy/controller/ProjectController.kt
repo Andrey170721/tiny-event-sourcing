@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.*
 import ru.quipy.api.*
 import ru.quipy.core.EventSourcingService
 import ru.quipy.logic.*
+import ru.quipy.projections.AnnotationBasedProjectEventsSubscriber
 import java.util.*
 
 @RestController
@@ -28,9 +29,9 @@ class ProjectController(
     }
 
     @PatchMapping("/{projectId}/changeTitle/{newTitle}")
-    fun changeProjectTitle(@PathVariable projectId: UUID, @PathVariable newTitle: String): ProjectTitleChangedEvent {
+    fun changeProjectTitle(@PathVariable projectId: UUID, @PathVariable newTitle: String, @RequestParam actorId: UUID): ProjectTitleChangedEvent {
         return projectEsService.update(projectId){
-            it.changeTitle(projectId, newTitle)
+            it.changeTitle(projectId, newTitle, actorId)
         }
     }
 

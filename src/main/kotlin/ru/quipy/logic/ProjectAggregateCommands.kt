@@ -22,20 +22,24 @@ fun ProjectAggregateState.addUser(projectId: UUID, userId: UUID, actorId: UUID):
     if (userAlreadyExist){
         throw IllegalArgumentException("User already exist in this project: $userId")
     }
-    var accessError = false;
+    var accessError = true;
     this.projectMemberIds.forEach{ element ->
             if(element == actorId){
-                accessError = true;
+                accessError = false;
             }
         }
-    if (actorId != this.creatorId || accessError){
+    if (!Objects.equals(actorId, this.creatorId) || accessError){
         throw IllegalArgumentException("User does not have permissions: $actorId")
     }
     return AddUserToProjectEvent(projectId = projectId, userId = userId);
 }
 
-fun ProjectAggregateState.changeTitle(projectId: UUID, title: String): ProjectTitleChangedEvent {
-    return ProjectTitleChangedEvent(projectId = projectId, title = title);
+fun ProjectAggregateState.changeTitle(projectId: UUID, title: String, actorId: UUID): ProjectTitleChangedEvent {
+    if (Objects.equals(actorId, creatorId)) {
+        return ProjectTitleChangedEvent(projectId = projectId, title = title)
+    } else {
+        throw IllegalArgumentException("User does not have permissions $actorId")
+    }
 }
 
 fun ProjectAggregateState.addStatus(name: String, color: String): StatusCreatedEvent {
