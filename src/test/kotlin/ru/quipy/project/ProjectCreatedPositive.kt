@@ -6,8 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.boot.web.server.LocalServerPort
-import org.springframework.http.HttpStatus
-import org.springframework.http.RequestEntity
+import org.springframework.http.*
 import ru.quipy.api.*
 import ru.quipy.logic.ProjectAggregateState
 import ru.quipy.logic.UserAggregateState
@@ -199,5 +198,40 @@ class ProjectCreatedPositive {
         Assertions.assertNotNull(addUserToProjectEvent)
         Assertions.assertEquals(createdProjectId, addUserToProjectEvent?.projectId)
         Assertions.assertEquals(createdUserId1, addUserToProjectEvent?.userId)
+    }
+
+    @Test
+    fun testChangeProjectTitle() {
+        // Создаем проект
+        val originalTitle = "Original Project Title"
+        val newTitle = "New Project Title"
+        val creatorId = UUID.randomUUID()
+
+        val createProjectResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$originalTitle?creatorId=$creatorId",
+            null,
+            ProjectCreatedEvent::class.java
+        )
+
+        // Проверяем успешное создание проекта
+        Assertions.assertEquals(HttpStatus.OK, createProjectResponse.statusCode)
+        val projectId = createProjectResponse.body?.projectId
+        Assertions.assertNotNull(projectId)
+
+        // Изменяем название проекта
+        val changeTitleResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/${projectId}/changeTitle/$newTitle?actorId=$creatorId",
+//            PATCH http://localhost:8080/projects/199d67ee-26fa-43a0-ba3d-83a9e9441b2c/changeTitle/TITLE?actorId=234aab7c-a5fd-4392-927f-d14aaf5ba7f7
+            null,
+            ProjectTitleChangedEvent::class.java
+        )
+
+        // Проверяем успешное изменение названия проекта
+        Assertions.assertEquals(HttpStatus.OK, changeTitleResponse.statusCode)
+        val projectTitleChangedEvent = changeTitleResponse.body
+        Assertions.assertNotNull(projectTitleChangedEvent)
+        Assertions.assertEquals(projectId, projectTitleChangedEvent?.projectId)
+//        Assertions.assertEquals(newTitle, projectTitleChangedEvent?.newTitle)
+//        Assertions.assertEquals(creatorId, projectTitleChangedEvent?.actorId)
     }
 }
