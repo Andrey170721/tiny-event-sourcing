@@ -145,7 +145,7 @@ class ProjectCreatedPositive {
         val password = UUID.randomUUID().toString()
 
         val createUserResponse = restTemplate.postForEntity(
-            "http://localhost:$port/users?name=$userName&nickname=$nickname&password=$password",
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
             null,
             UserCreatedEvent::class.java
         )
@@ -160,7 +160,7 @@ class ProjectCreatedPositive {
         val creatorId = createdUserId!!  // Предположим, что пользователь является создателем проекта
 
         val createProjectResponse = restTemplate.postForEntity(
-            "http://localhost:$port/projects?title=$projectTitle&creatorId=$creatorId",
+            "http://localhost:$port/projects/$projectTitle?creatorId=$creatorId",
             null,
             ProjectCreatedEvent::class.java
         )
@@ -170,9 +170,25 @@ class ProjectCreatedPositive {
         val createdProjectId = createProjectResponse.body?.projectId
         Assertions.assertNotNull(createdProjectId)
 
+        // Создаем пользователя 2
+        val userName1 = UUID.randomUUID().toString()
+        val nickname1 = UUID.randomUUID().toString()
+        val password1 = UUID.randomUUID().toString()
+
+        val createUserResponse1 = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName1?nickname=$nickname1&password=$password1",
+            null,
+            UserCreatedEvent::class.java
+        )
+
+        // Проверяем успешное создание пользователя
+        Assertions.assertEquals(HttpStatus.OK, createUserResponse1.statusCode)
+        val createdUserId1 = createUserResponse1.body?.userId
+        Assertions.assertNotNull(createdUserId1)
+
         // Добавляем пользователя к проекту
         val response = restTemplate.postForEntity(
-            "http://localhost:$port/projects/$createdProjectId/users/$createdUserId?actorId=$creatorId",
+            "http://localhost:$port/projects/$createdProjectId/users/$createdUserId1?actorId=$creatorId",
             null,
             AddUserToProjectEvent::class.java
         )
@@ -182,6 +198,6 @@ class ProjectCreatedPositive {
         val addUserToProjectEvent = response.body
         Assertions.assertNotNull(addUserToProjectEvent)
         Assertions.assertEquals(createdProjectId, addUserToProjectEvent?.projectId)
-        Assertions.assertEquals(createdUserId, addUserToProjectEvent?.userId)
+        Assertions.assertEquals(createdUserId1, addUserToProjectEvent?.userId)
     }
 }
