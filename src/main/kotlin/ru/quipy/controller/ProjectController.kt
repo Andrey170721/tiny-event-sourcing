@@ -30,7 +30,7 @@ class ProjectController(
         return projectEsService.update(projectId) { it.addUser(projectId, userId, actorId) }
     }
 
-    @PatchMapping("/{projectId}/changeTitle/{newTitle}")
+    @PostMapping("/{projectId}/changeTitle/{newTitle}")
     fun changeProjectTitle(@PathVariable projectId: UUID, @PathVariable newTitle: String, @RequestParam actorId: UUID): ProjectTitleChangedEvent {
         return projectEsService.update(projectId){
             it.changeTitle(projectId, newTitle, actorId)
@@ -38,7 +38,7 @@ class ProjectController(
     }
 
     @PostMapping("/{projectId}/status")
-    fun createStatus(@PathVariable projectId: UUID, @RequestBody title: String, @RequestBody color: String, @RequestBody actorId : UUID) : StatusCreatedEvent {
+    fun createStatus(@PathVariable projectId: UUID, @RequestParam title: String, @RequestParam color: String, @RequestParam actorId : UUID) : StatusCreatedEvent {
         return projectEsService.update(projectId) { it.addStatus (title, color, actorId) }
     }
 
@@ -65,7 +65,7 @@ class ProjectController(
         return projectEsService.update(projectId){ it.changeTaskStatus(taskId, newStatusId, actorId) }
     }
 
-    @PatchMapping("/{projectId}/tasks/{taskId}/assign/{userId}")
+    @PostMapping("/{projectId}/tasks/{taskId}/assign/{userId}")
     fun memberAssignToTask(@PathVariable projectId: UUID, @PathVariable taskId: UUID, @PathVariable userId: UUID, @RequestParam actorId: UUID) : MemberAssignedToTaskEvent {
         return projectEsService.update(projectId){ it.memberAssignedToTask(userId, taskId, actorId) }
     }

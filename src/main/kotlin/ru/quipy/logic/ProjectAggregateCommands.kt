@@ -82,6 +82,7 @@ fun ProjectAggregateState.changeTaskStatus(taskId: UUID, statusId: UUID, actorId
 
 fun ProjectAggregateState.memberAssignedToTask(userId: UUID, taskId: UUID, actorId: UUID): MemberAssignedToTaskEvent{
     checkPermissions(actorId)
+    checkPermissions(userId)
     var userNotExist = true;
     var taskNotExist = true;
 

@@ -14,7 +14,7 @@ import java.net.URI
 import java.util.UUID
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class ProjectCreatedPositive {
+class PositiveTests {
 
     @LocalServerPort
     private val port: Int = 8080
@@ -22,10 +22,22 @@ class ProjectCreatedPositive {
     @Autowired
     private lateinit var restTemplate: TestRestTemplate
 
+
     @Test
     fun testCreateProject() {
         val projectTitle = "Test Project"
-        val creatorId = UUID.randomUUID()
+
+        val userName = UUID.randomUUID().toString()
+        val nickname = UUID.randomUUID().toString()
+        val password = UUID.randomUUID().toString()
+
+        val responseUser = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
+            null,
+            UserCreatedEvent::class.java
+        )
+
+        val creatorId = responseUser.body?.userId
 
         val response = restTemplate.postForEntity(
             "http://localhost:$port/projects/$projectTitle?creatorId=$creatorId",
@@ -105,19 +117,30 @@ class ProjectCreatedPositive {
 
     @Test
     fun testGetProject() {
-        // Создаем проект
+        // Создаем юзера и проект
         val projectTitle = "Test Project"
-        val creatorId = UUID.randomUUID()
 
-        val createProjectResponse = restTemplate.postForEntity(
+        val userName = UUID.randomUUID().toString()
+        val nickname = UUID.randomUUID().toString()
+        val password = UUID.randomUUID().toString()
+
+        val responseUser = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
+            null,
+            UserCreatedEvent::class.java
+        )
+
+        val creatorId = responseUser.body?.userId
+
+        val response = restTemplate.postForEntity(
             "http://localhost:$port/projects/$projectTitle?creatorId=$creatorId",
             null,
             ProjectCreatedEvent::class.java
         )
 
         // Проверяем успешное создание проекта
-        Assertions.assertEquals(HttpStatus.OK, createProjectResponse.statusCode)
-        val createdProjectId = createProjectResponse.body?.projectId
+        Assertions.assertEquals(HttpStatus.OK, response.statusCode)
+        val createdProjectId = response.body?.projectId
         Assertions.assertNotNull(createdProjectId)
 
         // Получаем проект по идентификатору
@@ -202,10 +225,23 @@ class ProjectCreatedPositive {
 
     @Test
     fun testChangeProjectTitle() {
+
+        // Создаём юзера
+
+        val userName = UUID.randomUUID().toString()
+        val nickname = UUID.randomUUID().toString()
+        val password = UUID.randomUUID().toString()
+
+        val responseUser = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
+            null,
+            UserCreatedEvent::class.java
+        )
+
         // Создаем проект
         val originalTitle = "Original Project Title"
         val newTitle = "New Project Title"
-        val creatorId = UUID.randomUUID()
+        val creatorId = responseUser.body?.userId
 
         val createProjectResponse = restTemplate.postForEntity(
             "http://localhost:$port/projects/$originalTitle?creatorId=$creatorId",
@@ -221,7 +257,6 @@ class ProjectCreatedPositive {
         // Изменяем название проекта
         val changeTitleResponse = restTemplate.postForEntity(
             "http://localhost:$port/projects/${projectId}/changeTitle/$newTitle?actorId=$creatorId",
-//            PATCH http://localhost:8080/projects/199d67ee-26fa-43a0-ba3d-83a9e9441b2c/changeTitle/TITLE?actorId=234aab7c-a5fd-4392-927f-d14aaf5ba7f7
             null,
             ProjectTitleChangedEvent::class.java
         )
@@ -231,7 +266,159 @@ class ProjectCreatedPositive {
         val projectTitleChangedEvent = changeTitleResponse.body
         Assertions.assertNotNull(projectTitleChangedEvent)
         Assertions.assertEquals(projectId, projectTitleChangedEvent?.projectId)
-//        Assertions.assertEquals(newTitle, projectTitleChangedEvent?.newTitle)
-//        Assertions.assertEquals(creatorId, projectTitleChangedEvent?.actorId)
+        Assertions.assertEquals(newTitle, projectTitleChangedEvent?.title)
+    }
+
+    @Test
+    fun testAddStatusToProject() {
+        // First, create a project as in the previous tests
+
+        val userName = UUID.randomUUID().toString()
+        val nickname = UUID.randomUUID().toString()
+        val password = UUID.randomUUID().toString()
+
+        val responseUser = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
+            null,
+            UserCreatedEvent::class.java
+        )
+
+
+        val projectTitle = "Test Project Status Addition"
+        val creatorId = responseUser.body?.userId
+
+        val createProjectResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectTitle?creatorId=$creatorId",
+            null,
+            ProjectCreatedEvent::class.java
+        )
+
+        Assertions.assertEquals(HttpStatus.OK, createProjectResponse.statusCode)
+        val projectId = createProjectResponse.body?.projectId
+        Assertions.assertNotNull(projectId)
+
+        // Now, add a status to the project
+        val statusTitle = "In Progress"
+        val statusColor = "Blue"
+
+        val addStatusResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectId/status?title=$statusTitle&color=$statusColor&actorId=$creatorId",
+            null,
+            StatusCreatedEvent::class.java
+        )
+
+        // Check that the status was added successfully
+        Assertions.assertEquals(HttpStatus.OK, addStatusResponse.statusCode)
+        val statusCreatedEvent = addStatusResponse.body
+        Assertions.assertNotNull(statusCreatedEvent)
+        Assertions.assertNotNull(statusCreatedEvent?.statusId)
+        Assertions.assertEquals(statusTitle, statusCreatedEvent?.statusName)
+    }
+
+    @Test
+    fun testCreateTask() {
+        // Предполагаем, что проект уже создан
+        val userName = UUID.randomUUID().toString()
+        val nickname = UUID.randomUUID().toString()
+        val password = UUID.randomUUID().toString()
+
+        val responseUser = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
+            null,
+            UserCreatedEvent::class.java
+        )
+
+
+        val projectTitle = "Test Project Status Addition"
+        val creatorId = responseUser.body?.userId
+
+        val createProjectResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectTitle?creatorId=$creatorId",
+            null,
+            ProjectCreatedEvent::class.java
+        )
+
+        val projectId = createProjectResponse.body?.projectId
+
+        // Данные для создания задачи
+        val taskTitle = "New Task"
+
+        // Отправляем запрос на создание задачи
+        val createTaskResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectId/tasks/$taskTitle?actorId=$creatorId",
+            null,
+            TaskCreatedEvent::class.java
+        )
+
+        // Проверяем успешное создание задачи
+        Assertions.assertEquals(HttpStatus.OK, createTaskResponse.statusCode)
+        val taskCreatedEvent = createTaskResponse.body
+        Assertions.assertNotNull(taskCreatedEvent)
+        Assertions.assertNotNull(taskCreatedEvent?.taskId)
+        Assertions.assertEquals(taskTitle, taskCreatedEvent?.title)
+    }
+
+    @Test
+    fun testAssignStatusToTask() {
+        // Assume we have already created a project and added a status to it
+        // Also, assume we have created a task in the project as previous tests
+        val userName = UUID.randomUUID().toString()
+        val nickname = UUID.randomUUID().toString()
+        val password = UUID.randomUUID().toString()
+
+        val responseUser = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
+            null,
+            UserCreatedEvent::class.java
+        )
+
+
+        val projectTitle = "Test Project Status Addition"
+        val creatorId = responseUser.body?.userId
+
+        val createProjectResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectTitle?creatorId=$creatorId",
+            null,
+            ProjectCreatedEvent::class.java
+        )
+
+        Assertions.assertEquals(HttpStatus.OK, createProjectResponse.statusCode)
+        val projectId = createProjectResponse.body?.projectId
+        Assertions.assertNotNull(projectId)
+
+        // Now, add a status to the project
+        val statusTitle = "In Progress"
+        val statusColor = "Blue"
+
+        val addStatusResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectId/status?title=$statusTitle&color=$statusColor&actorId=$creatorId",
+            null,
+            StatusCreatedEvent::class.java
+        )
+
+        val statusId = addStatusResponse.body?.statusId
+
+        val taskTitle = "New Task"
+
+        // Отправляем запрос на создание задачи
+        val createTaskResponse = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectId/tasks/$taskTitle?actorId=$creatorId",
+            null,
+            TaskCreatedEvent::class.java
+        )
+
+        val taskId = createTaskResponse.body?.taskId
+
+
+        val changeTaskStatusResponse = restTemplate.patchForObject(
+            "http://localhost:$port/projects/$projectId/tasks/$taskId/changeStatus/$statusId?actorId=$creatorId",
+            null,
+            TaskStatusChangedEvent::class.java
+        )
+
+        // Check that the task status was changed successfully
+        Assertions.assertNotNull(changeTaskStatusResponse)
+        Assertions.assertEquals(taskId, changeTaskStatusResponse?.taskId)
+        Assertions.assertEquals(statusId, changeTaskStatusResponse?.statusId)
     }
 }
