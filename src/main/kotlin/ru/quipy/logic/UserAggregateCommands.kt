@@ -1,5 +1,9 @@
 package ru.quipy.logic
 
+import com.mongodb.client.MongoClients
+import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.query.Criteria
+import org.springframework.data.mongodb.core.query.Query
 import ru.quipy.api.UserChangedNameEvent
 import ru.quipy.api.UserCreatedEvent
 import java.util.*
