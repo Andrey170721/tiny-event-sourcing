@@ -1,6 +1,7 @@
 package ru.quipy.logic
 
 import ru.quipy.api.*
+import ru.quipy.core.EventSourcingService
 import java.util.*
 
 
@@ -8,6 +9,7 @@ import java.util.*
 // Here the commands are represented by extension functions, but also can be the class member functions
 
 fun ProjectAggregateState.create(id: UUID, title: String, creatorId: UUID): ProjectCreatedEvent {
+    val userEsService: EventSourcingService<UUID, UserAggregate, UserAggregateState>
     return ProjectCreatedEvent(projectId = id, title = title, creatorId = creatorId)
 }
 
@@ -22,15 +24,7 @@ fun ProjectAggregateState.addUser(projectId: UUID, userId: UUID, actorId: UUID):
     if (userAlreadyExist){
         throw IllegalArgumentException("User already exist in this project: $userId")
     }
-    var accessError = true;
-    this.projectMemberIds.forEach{ element ->
-            if(element == actorId){
-                accessError = false;
-            }
-        }
-    if (!Objects.equals(actorId, this.creatorId) || accessError){
-        throw IllegalArgumentException("User does not have permissions: $actorId")
-    }
+    checkPermissions(actorId)
     return AddUserToProjectEvent(projectId = projectId, userId = userId);
 }
 
@@ -42,11 +36,13 @@ fun ProjectAggregateState.changeTitle(projectId: UUID, title: String, actorId: U
     }
 }
 
-fun ProjectAggregateState.addStatus(name: String, color: String): StatusCreatedEvent {
+fun ProjectAggregateState.addStatus(name: String, color: String, actorId: UUID): StatusCreatedEvent {
+    checkPermissions(actorId)
     return StatusCreatedEvent(projectId = this.getId(), statusId = UUID.randomUUID(), statusName = name, color = color)
 }
 
-fun ProjectAggregateState.removeStatus(statusId: UUID, projectId: UUID): StatusDeletedEvent {
+fun ProjectAggregateState.removeStatus(statusId: UUID, projectId: UUID, actorId: UUID): StatusDeletedEvent {
+    checkPermissions(actorId)
     if (!projectStatus.containsKey(statusId)){
         throw IllegalArgumentException("Status doesn't exists: $statusId")
     }
@@ -65,15 +61,18 @@ fun ProjectAggregateState.removeStatus(statusId: UUID, projectId: UUID): StatusD
     return StatusDeletedEvent(statusId, projectId)
 }
 
-fun ProjectAggregateState.addTask(name: String): TaskCreatedEvent {
+fun ProjectAggregateState.addTask(name: String, actorId: UUID): TaskCreatedEvent {
+    checkPermissions(actorId)
     return TaskCreatedEvent(projectId = this.getId(), taskId = UUID.randomUUID(), title = name)
 }
 
-fun ProjectAggregateState.changeTaskTitle(taskId: UUID, title: String): TaskTitleChangedEvent{
+fun ProjectAggregateState.changeTaskTitle(taskId: UUID, title: String, actorId: UUID): TaskTitleChangedEvent{
+    checkPermissions(actorId)
     return  TaskTitleChangedEvent(taskId = taskId, title = title)
 }
 
-fun ProjectAggregateState.changeTaskStatus(taskId: UUID, statusId: UUID): TaskStatusChangedEvent{
+fun ProjectAggregateState.changeTaskStatus(taskId: UUID, statusId: UUID, actorId: UUID): TaskStatusChangedEvent{
+    checkPermissions(actorId)
     if (!projectStatus.containsKey(statusId)){
         throw IllegalArgumentException("Status doesn't exists: $statusId")
     }
@@ -81,7 +80,8 @@ fun ProjectAggregateState.changeTaskStatus(taskId: UUID, statusId: UUID): TaskSt
     return TaskStatusChangedEvent(taskId = taskId, statusId = statusId)
 }
 
-fun ProjectAggregateState.memberAssignedToTask(userId: UUID, taskId: UUID): MemberAssignedToTaskEvent{
+fun ProjectAggregateState.memberAssignedToTask(userId: UUID, taskId: UUID, actorId: UUID): MemberAssignedToTaskEvent{
+    checkPermissions(actorId)
     var userNotExist = true;
     var taskNotExist = true;
 
@@ -106,4 +106,16 @@ fun ProjectAggregateState.memberAssignedToTask(userId: UUID, taskId: UUID): Memb
     }
 
     return MemberAssignedToTaskEvent(taskId = taskId, userId = userId)
+}
+
+fun ProjectAggregateState.checkPermissions(userId: UUID){
+    var accessError = true;
+    this.projectMemberIds.forEach{ element ->
+        if(element == userId){
+            accessError = false;
+        }
+    }
+    if (!Objects.equals(userId, this.creatorId) || accessError){
+        throw IllegalArgumentException("User does not have permissions: $userId")
+    }
 }
