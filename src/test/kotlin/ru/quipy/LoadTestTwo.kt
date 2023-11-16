@@ -1,7 +1,6 @@
 package ru.quipy
 
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.loadtest4j.LoadTester
 import org.loadtest4j.Request
@@ -9,58 +8,57 @@ import org.loadtest4j.Result
 import org.loadtest4j.drivers.jmeter.JMeterBuilder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.mongodb.core.MongoTemplate
-import org.springframework.data.mongodb.core.query.Criteria
-import org.springframework.data.mongodb.core.query.Query
+import org.springframework.boot.test.web.client.TestRestTemplate
+import org.springframework.boot.test.web.server.LocalServerPort
+import org.springframework.http.HttpStatus
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
-import ru.quipy.api.ProjectAggregate
-import ru.quipy.api.StatusCreatedEvent
-import ru.quipy.api.TaskCreatedEvent
-import ru.quipy.api.UserAggregate
-import ru.quipy.core.EventSourcingService
-import ru.quipy.logic.*
+import ru.quipy.api.*
 import java.util.*
 
 @SpringBootTest
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-class LoadTest {
-    private val testId = UUID.fromString("ba4463d8-4332-4b4c-ac5e-2763bb83ada4")
-    private val userId = UUID.fromString("43b971d0-253f-49d8-87db-10d15c552eae")
-    private val taskName = "Name-b8e468ec-995a-4b52-ac14-468c830f8dd0"
-    private val statusColor = "4287f5"
-    private val testProjectName = "testProjectName$541(*@#&91459"
-    private val projectTitle = "Test Project"
+class LoadTestTwo {
 
-    private val userName = UUID.randomUUID().toString()
-    private val nickname = UUID.randomUUID().toString()
-    private val password = UUID.randomUUID().toString()
+    @LocalServerPort
+    private val port: Int = 8080
 
     @Autowired
-    private lateinit var projectEsService: EventSourcingService<UUID, ProjectAggregate, ProjectAggregateState>
+    private lateinit var restTemplate: TestRestTemplate
 
-    @Autowired
-    private lateinit var userEsService: EventSourcingService<UUID, UserAggregate, UserAggregateState>
+    @Test
+    fun testCreateProject() {
+        val projectTitle = "Test Project"
 
-    @Autowired
-    lateinit var mongoTemplate: MongoTemplate
+        val userName = UUID.randomUUID().toString()
+        val nickname = UUID.randomUUID().toString()
+        val password = UUID.randomUUID().toString()
 
-    @BeforeEach
-    fun init() {
-        mongoTemplate.remove(Query.query(Criteria.where("aggregateId").`is`(testId)), "aggregate-project")
-        mongoTemplate.remove(Query.query(Criteria.where("aggregateId").`is`(userId)), "aggregate-user")
-        mongoTemplate.remove(Query.query(Criteria.where("snapshot.projectId").`is`(testId)), "snapshots")
+        val responseUser = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
+            null,
+            UserCreatedEvent::class.java
+        )
 
-        userEsService.create {
-            it.create(userId, userName, nickname, password)
-        }
+        val creatorId = responseUser.body?.userId
 
-        projectEsService.create {
-            it.create(testId, testProjectName, userId)
-        }
+        val response = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectTitle?creatorId=$creatorId",
+            null,
+            ProjectCreatedEvent::class.java
+        )
+
+        // Проверяем, что запрос вернул статус 200 OK
+        Assertions.assertEquals(response.statusCode, HttpStatus.OK)
+
+        // Проверяем, что ответ содержит созданный проект
+        val projectCreatedEvent = response.body
+        Assertions.assertNotNull(projectCreatedEvent)
+        Assertions.assertNotNull(projectCreatedEvent?.projectId)
+        Assertions.assertEquals(projectCreatedEvent?.title, projectTitle)
+        Assertions.assertEquals(projectCreatedEvent?.creatorId, creatorId)
     }
-
     val loadTesterBuilder = JMeterBuilder.withUrl("http", "localhost", 8080)
     // *numThreads* - Количество пользователей
     // *Ramp-Up Period* - указывает JMeter, какую задержку перед запуском следующего пользователя нужно сделать.
@@ -68,20 +66,30 @@ class LoadTest {
     //      то задержка между запуском пользователей составит 1 секунду (100 секунд /100 пользователей)
     // numThreads / RumpUp = количество запросов в секунду
 
-    fun formRelativeUrlForLT(): String {
-        val oneStatusEvent: StatusCreatedEvent = projectEsService.update(testId) {
-            it.addStatus("1", statusColor)
-        }
-
-        val createdTaskEvent: TaskCreatedEvent = projectEsService.update(testId) {
-            it.addTask(taskName)
-        }
-
-        return "/projects/${testId}/status/assign/${createdTaskEvent.taskId}/${oneStatusEvent.statusId}"
-    }
-
-
     fun loadGeneralTest(numThreads: Int, rampUp: Int): Result {
+        val projectTitle = "Test Project"
+
+        val userName = UUID.randomUUID().toString()
+        val nickname = UUID.randomUUID().toString()
+        val password = UUID.randomUUID().toString()
+
+        val responseUser = restTemplate.postForEntity(
+            "http://localhost:$port/users/1/$userName?nickname=$nickname&password=$password",
+            null,
+            UserCreatedEvent::class.java
+        )
+
+        val creatorId = responseUser.body?.userId
+
+        val response = restTemplate.postForEntity(
+            "http://localhost:$port/projects/$projectTitle?creatorId=$creatorId",
+            null,
+            ProjectCreatedEvent::class.java
+        )
+
+        // Проверяем, что запрос вернул статус 200 OK
+        Assertions.assertEquals(response.statusCode, HttpStatus.OK)
+
         val loadTester: LoadTester = loadTesterBuilder
             .withNumThreads(numThreads) // Количество пользователей
             .withRampUp(rampUp)
@@ -89,7 +97,7 @@ class LoadTest {
 
         val result = loadTester.run(
             listOf(
-                Request.put(formRelativeUrlForLT())
+                Request.put("http://localhost:$port/projects/$projectTitle?creatorId=$creatorId")
                     .withHeader("Accept", "*/*")
             )
         )

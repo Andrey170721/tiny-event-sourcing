@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.7.7</version>
+		<version>3.1.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>ru.quipy</groupId>
@@ -63,7 +63,14 @@
 			<artifactId>tiny-mongo-event-store-spring-boot-starter</artifactId>
 			<version>${tiny.es.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.loadtest4j</groupId>
+			<artifactId>loadtest4j</artifactId>
+			<version>0.19.0</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
+
 
 	<build>
 		<sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
