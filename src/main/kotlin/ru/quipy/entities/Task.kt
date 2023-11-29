@@ -8,6 +8,6 @@ data class Task (
     var taskId: UUID,
     var projectId : UUID,
     var title : String,
-    var statusId: UUID,
+    var statusId: UUID?,
     var executors: MutableList<UUID> = mutableListOf()
 )

@@ -41,11 +41,12 @@ class UserController(
         return userEsService.getState(userId)
     }
 
-//    @GetMapping("/{nickname}")
-//    fun checkIfNicknameExists(@PathVariable nickname: String) : Boolean {
-//        return userEsService.getState(nickname) != null
-//    }
-//
+    @GetMapping("/{nickname}")
+    fun getUserByNickname(@PathVariable nickname: String) : User {
+        val user = userService.getUserByNickname(nickname) ?: throw IllegalArgumentException("User does not exist")
+        return user
+    }
+
 //    @GetMapping("/findByNicknameSubstr/{nicknameSubstr}")
 //    fun findByNicknameSubstr(@PathVariable nicknameSubstr: String) : List<UserViewDomain.User> {
 //        return userViewService.findByNameSubs(nicknameSubstr)

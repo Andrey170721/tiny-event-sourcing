@@ -3,7 +3,11 @@ package ru.quipy.controller
 import org.springframework.web.bind.annotation.*
 import ru.quipy.api.*
 import ru.quipy.core.EventSourcingService
+import ru.quipy.entities.Project
+import ru.quipy.entities.Status
+import ru.quipy.entities.Task
 import ru.quipy.logic.*
+import ru.quipy.services.ProjectService
 import java.util.*
 
 @RestController
@@ -11,6 +15,7 @@ import java.util.*
 class ProjectController(
     val projectEsService: EventSourcingService<UUID, ProjectAggregate, ProjectAggregateState>,
     val userEsService: EventSourcingService<UUID, UserAggregate, UserAggregateState>,
+    val projectService: ProjectService
 ) {
 
     @PostMapping("/{projectTitle}")
@@ -70,9 +75,18 @@ class ProjectController(
         return projectEsService.update(projectId){ it.memberAssignedToTask(userId, taskId, actorId) }
     }
 
+    @GetMapping("/getAllProjects")
+    fun getAllProjects(): List<Project>{
+        return projectService.getAllProjects()
+    }
+
     @GetMapping("/{projectId}/getTasks")
-    fun getTasks(@PathVariable projectId: UUID): MutableMap<UUID, TaskEntity>? {
-        val projectAggregateState = projectEsService.getState(projectId)
-        return projectAggregateState?.tasks
+    fun getProjectTasks(@PathVariable projectId: UUID): List<Task> {
+        return projectService.getAllProjectTasks(projectId)
+    }
+
+    @GetMapping("/{projectId}/getStatuses")
+    fun getProjectStatuses(@PathVariable projectId: UUID) : List<Status>{
+        return projectService.getAllProjectStatuses(projectId)
     }
 }

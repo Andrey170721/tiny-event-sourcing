@@ -6,4 +6,5 @@ import java.util.UUID
 data class Project(
     var projectId: UUID,
     var title: String,
+    var members: MutableList<UUID> = mutableListOf()
 )
