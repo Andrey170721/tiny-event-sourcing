@@ -5,20 +5,35 @@ import ru.quipy.api.UserAggregate
 import ru.quipy.api.UserChangedNameEvent
 import ru.quipy.api.UserCreatedEvent
 import ru.quipy.core.EventSourcingService
+import ru.quipy.entities.User
 import ru.quipy.logic.UserAggregateState
 import ru.quipy.logic.changeName
 import ru.quipy.logic.create
+import ru.quipy.repositories.UserRepository
+import ru.quipy.services.UserService
 import java.util.*
 
 @RestController
 @RequestMapping("/users")
 class UserController(
     val userEsService: EventSourcingService<UUID, UserAggregate, UserAggregateState>,
+    val userService: UserService
 ) {
 
     @PostMapping("/1/{name}")
     fun addUser(@PathVariable name: String, @RequestParam nickname: String, @RequestParam password: String) : UserCreatedEvent {
+        if (userService.getUserByNickname(nickname) != null){
+            throw IllegalArgumentException("User with this nickname already exists")
+        }
         return userEsService.create { it.create(UUID.randomUUID(), name, nickname, password) }
+    }
+
+    @GetMapping("/checkNickname/{nickname}")
+    fun checkNickname(@PathVariable nickname: String): Boolean{
+        if (userService.getUserByNickname(nickname) == null){
+            return false
+        }
+        return true
     }
 
     @GetMapping("/{userId}")
